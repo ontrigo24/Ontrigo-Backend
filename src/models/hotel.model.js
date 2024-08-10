@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const hotelSchema = mongoose.Schema(
+const hotelSchema = new mongoose.Schema(
     {
         hotelId:{
             type:String,
@@ -31,9 +31,9 @@ const hotelSchema = mongoose.Schema(
         address:{
             type:Number,
         },
-        image:{
-            type:Number,
-        },
+        images:[{
+            type:String,
+        }],
         pricePerNight:{
             type:Number,
         },

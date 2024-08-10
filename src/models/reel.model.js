@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const reelSchema = mongoose.Schema(
+const reelSchema = new mongoose.Schema(
     {
         title:{
             type:String,

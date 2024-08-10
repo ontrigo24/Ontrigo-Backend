@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const rewardSchema = mongoose.Schema(                       // need to rethink latter
+const rewardSchema = new mongoose.Schema(                       // need to rethink latter
     {
         userId:{
             type:mongoose.Schema.Types.ObjectId,
