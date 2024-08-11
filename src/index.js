@@ -1,9 +1,9 @@
-import dotenv from "dotenv";
-import connectDB from "./config/mongo.config.js";
-import {app} from "./app.js";
+const dotenv =  require("dotenv");
+const connectDB = require("./config/mongo.config.js");
+const app =  require("./app.js");
 
 dotenv.config({
-    path: "./.env",
+    path: "./.env"
 });
 
 const PORT = process.env.PORT || 8000;
