@@ -3,12 +3,13 @@ const asyncHandler = (func) => async(req, res, next) => {
         await func(req, res, next);
     }
     catch(err){
+        console.log(err);
         res.status(err.statusCode || 500).json({
             success:false,
-            message: err.message
+            message: `${err}`
         })
     } 
 };
-export {asyncHandler}
+module.exports = asyncHandler;
 
 

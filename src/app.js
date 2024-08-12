@@ -1,7 +1,7 @@
-import express from "express";
+const express =  require("express");
 const app = express();
-import cookieParser from "cookie-parser";
-import cors from "cors";
+const cookieParser = require("cookie-parser");
+const cors =  require("cors");
 
 app.use(cors({
     origin: process.env.CORS_ORIGIN,
@@ -16,4 +16,6 @@ app.use(express.urlencoded({
 
 app.use(cookieParser());
 
-export {app};
+app.use("/api/v1/user", require("./routes/auth.router"));
+
+module.exports = app;
