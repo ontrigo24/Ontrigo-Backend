@@ -3,13 +3,104 @@ const {User, Otp} = require("../models");
 const jwt = require("jsonwebtoken");
 const otpGenerator = require("otp-generator");
 const bcrypt = require("bcrypt");
+const getFirebaseUser = require("../config/firebase.config");
 
-
-// signup using email pasword
 // signup using gmail
 // signup using facebook
-// forgot password
-// signin
+
+
+exports.firebaseSignup = asyncHandler(async(req, res, next)=>{
+
+    let {provider, providerToken} = req.body;
+
+    if(!providerToken || !provider){    
+        throw new ApiError(400, "Please provide required fields");
+    } 
+
+    if(provider !== "google" && provider !== "facebook"){
+        throw new ApiError(400, "Invalid provider");
+    }
+
+    // get details from provierToken
+    let firstName = null, lastName = null, email = null, avatarUrl = null, password = null;
+
+    if(provider === "google"){
+        let googleUser = getFirebaseUser(providerToken);
+
+        googleUser = googleUser.providerData.filter((data)=> data.providerId === "google.com")[0];
+
+        const {displayName} = googleUser;
+
+        firstName = displayName.split(" ")[0];
+        lastName = displayName.split(" ")[1];
+
+        email = googleUser.email;
+        avatarUrl = googleUser.photoURL;
+    }
+            
+    // check if user already registered
+    const existedUser = await User.findOne({email});
+    if(existedUser){
+        throw new ApiError(400, "Email already in use");
+    }
+
+    // create entry in db
+    const user = await User.create({
+        email,
+        firstName,
+        lastName,
+        password,
+        photoUrl,
+        provider,
+    });
+
+    // generate jwt token
+    const token = createdUser.generateAccessToken();
+
+    // return response
+    res.header("x-auth-token", token);
+
+    return res.status(201).json(
+        new ApiResponse(201, {...user._doc, token}, "User signup via firebase successful")
+    )
+
+})
+
+exports.firebaseSignin = asyncHandler(async(req, res, next)=>{
+    const {provider, providerToken} = req.body;
+
+    if(!provider || !providerToken){
+        throw new ApiError(400, "Please provide required fields")
+    } 
+
+    let email = null;
+
+    if(provider === "google"){
+        let googleUser = getFirebaseUser(providerToken);
+
+        googleUser = googleUser.providerData.filter((data)=> data.providerId === "google.com")[0];
+
+        email = googleUser.email;
+    }
+            
+    if(!email){
+        throw new ApiError(400, "User email not found");
+    }
+
+    const user = await User.findOne({email});
+
+    if(!user){
+        throw new ApiError(400, "User not registered");
+    }
+
+    user.password = undefined;
+
+    return res.status(200).json(
+        new ApiResponse(200, user, "User successfully singed in")
+    )
+
+    
+})
 
 exports.signUp = asyncHandler(async(req, res, next)=>{
 
@@ -54,16 +145,16 @@ exports.signUp = asyncHandler(async(req, res, next)=>{
     if(isWeak){
         throw new ApiError(400, isWeak);
     }
-
     // ecrypt password
     password = await bcrypt.hash(password, 10);
+
+
 
     // create entry in db
     const createdUser = await User.create({email, password, firstName, lastName});
     if(!createdUser){
         throw new ApiError(500, "User registeration failed");
     }
-    
     // generate jwt token
     const token = createdUser.generateAccessToken();
 
@@ -131,17 +222,16 @@ exports.signIn = asyncHandler(async(req, res, next)=>{
     } 
 
     const registeredUser = await User.findOne({email});
-    
     if(!registeredUser){
         throw new ApiError(400, "User with provided email doesn't exist")
     } 
 
     const isCorrect = await registeredUser.verifyPassword(password);
-    
-    if(!isCorrect){
+    const provider = registeredUser.provider;
+    if(!isCorrect && provider === "local"){
         throw new ApiError(400, "Incorrect Password");
     } 
-
+    
     const token = await registeredUser.generateAccessToken();
 
     res.header('x-auth-token', token);

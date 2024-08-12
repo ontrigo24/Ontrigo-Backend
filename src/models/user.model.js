@@ -47,6 +47,12 @@ const userScehma = new mongoose.Schema(
         martialStatus:{
             type:Boolean
         },
+        provider:{
+            type:String,
+            enum:["local", "google", "facebook"],
+            default:"local",
+            required:true,
+        },
         previousIternaries:[{                                   // Iternaries that the user has finalalised for booking in the past
             type: mongoose.Schema.Types.ObjectId,
             ref: "Iternary"
@@ -73,7 +79,6 @@ userScehma.methods.generateAccessToken = function(){
         {
             _id: this._id,
             email: this.email,
-            fullName: this.fullName
         },
         process.env.ACCESS_TOKEN_SECRET,
         {
