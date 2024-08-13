@@ -3,7 +3,7 @@ const {User, Otp} = require("../models");
 const jwt = require("jsonwebtoken");
 const otpGenerator = require("otp-generator");
 const bcrypt = require("bcrypt");
-const getFirebaseUser = require("../config/firebase.config");
+const admin = require("../config/firebase.config");
 
 // signup using gmail
 // signup using facebook
@@ -25,17 +25,21 @@ exports.firebaseSignup = asyncHandler(async(req, res, next)=>{
     let firstName = null, lastName = null, email = null, avatarUrl = null, password = null;
 
     if(provider === "google"){
-        let googleUser = getFirebaseUser(providerToken);
+        const googleUser = await admin.auth().verifyIdToken(providerToken);
 
-        googleUser = googleUser.providerData.filter((data)=> data.providerId === "google.com")[0];
+        if(!googleUser){
+            throw new ApiError(400, "google user not found");
+        }
 
-        const {displayName} = googleUser;
+        const googleData = googleUser.providerData.filter((data)=> data.providerId === "google.com")[0];
+
+        const {displayName} = googleData;
 
         firstName = displayName.split(" ")[0];
         lastName = displayName.split(" ")[1];
 
-        email = googleUser.email;
-        avatarUrl = googleUser.photoURL;
+        email = googleData.email;
+        avatarUrl = googleData.photoURL;
     }
             
     // check if user already registered
@@ -76,11 +80,16 @@ exports.firebaseSignin = asyncHandler(async(req, res, next)=>{
     let email = null;
 
     if(provider === "google"){
-        let googleUser = getFirebaseUser(providerToken);
+        const googleUser = await admin.auth().verifyIdToken(providerToken);
 
-        googleUser = googleUser.providerData.filter((data)=> data.providerId === "google.com")[0];
+        if(!googleUser){
+            throw new ApiError(400, "google user not found");
+        }
+    
+        const googleData = googleUser.providerData.filter((data)=> data.providerId === "google.com")[0];
 
-        email = googleUser.email;
+        email = googleData.email;
+    
     }
             
     if(!email){
@@ -187,10 +196,10 @@ exports.sendOtp = asyncHandler( async(req, res, next)=>{
         throw new ApiError(409, "Email not registered");
     }
     
-    const otp = otpGenerator.generate( type === "signup" ? 6 : 10, {
-        upperCaseAlphabets: type === "signup" ? false : true,
-        lowerCaseAlphabets: type === "signup" ? false : true,
-        specialChars: type === "signup" ? false : true
+    const otp = otpGenerator.generate( type === "signup" ? 4 : 6, {
+        upperCaseAlphabets: false,
+        lowerCaseAlphabets: false,
+        specialChars:false
     });
 
     const emailResponse = await mailSender(email, "Your Ontrigo verification code is: ", otp);
@@ -232,6 +241,7 @@ exports.signIn = asyncHandler(async(req, res, next)=>{
         throw new ApiError(400, "Incorrect Password");
     } 
     
+
     const token = await registeredUser.generateAccessToken();
 
     res.header('x-auth-token', token);
@@ -277,6 +287,17 @@ exports.forgotPassword = asyncHandler(async(req, res, next)=>{
         new ApiResponse(200, user, "Password reset successful")
     )
 
+})
+
+exports.getUser = asyncHandler(async(req, res, next)=>{
+
+    const user = req.user;
+
+    user.password = undefined;
+
+    return res.status(200).json(
+        new ApiResponse(200, user._doc, "user details fetched successfully")
+    )
 })
 
 const passSteangth = (pass)=>{

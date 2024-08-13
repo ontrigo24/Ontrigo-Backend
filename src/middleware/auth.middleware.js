@@ -12,13 +12,13 @@ const auth = asyncHandler( async function(req, res, next){
         throw new ApiError(400, "User not authorised, token not found")
     }
 
-    const verifiedUser = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    const verifiedUser = await jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
 
     if(!verifiedUser){
         throw new ApiError(400, "Authorisation failed");
     }
 
-    const user = User.findById(verifiedUser._id);
+    const user = await User.findById(verifiedUser._id);
 
     if(!user){
         throw new ApiError(400, "Authorisation failed, no valid user with this token found")
@@ -27,5 +27,5 @@ const auth = asyncHandler( async function(req, res, next){
     req.user = user;
 
     next();
-
 })
+module.exports = auth;
