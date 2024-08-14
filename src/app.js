@@ -16,6 +16,6 @@ app.use(express.urlencoded({
 
 app.use(cookieParser());
 
-app.use("/api/v1/user", require("./routes/auth.router"));
+app.use("/api/auth/", require("./routes/auth.router"));
 
 module.exports = app;
