@@ -5,7 +5,6 @@ const otpGenerator = require("otp-generator");
 const bcrypt = require("bcrypt");
 const admin = require("../config/firebase.config");
 
-// signup using gmail
 // signup using facebook
 
 
@@ -28,7 +27,7 @@ exports.firebaseSignup = asyncHandler(async(req, res, next)=>{
         const googleUser = await admin.auth().verifyIdToken(providerToken);
 
         if(!googleUser){
-            throw new ApiError(400, "google user not found");
+            throw new ApiError(404, "google user not found");
         }
 
         const googleData = googleUser.providerData.filter((data)=> data.providerId === "google.com")[0];
@@ -45,7 +44,7 @@ exports.firebaseSignup = asyncHandler(async(req, res, next)=>{
     // check if user already registered
     const existedUser = await User.findOne({email});
     if(existedUser){
-        throw new ApiError(400, "Email already in use");
+        throw new ApiError(409, "Email already in use");
     }
 
     // create entry in db
@@ -56,16 +55,16 @@ exports.firebaseSignup = asyncHandler(async(req, res, next)=>{
         password,
         photoUrl,
         provider,
-    });
+    }).select("-password -previousIternaries");
 
     // generate jwt token
-    const token = createdUser.generateAccessToken();
+    const token = user.generateAccessToken();
 
     // return response
     res.header("x-auth-token", token);
-
-    return res.status(201).json(
-        new ApiResponse(201, {...user._doc, token}, "User signup via firebase successful")
+    
+    return res.status(200).json(
+        new ApiResponse(200, {...user._doc, token}, "User signup via firebase successful")
     )
 
 })
@@ -83,7 +82,7 @@ exports.firebaseSignin = asyncHandler(async(req, res, next)=>{
         const googleUser = await admin.auth().verifyIdToken(providerToken);
 
         if(!googleUser){
-            throw new ApiError(400, "google user not found");
+            throw new ApiError(404, "google user not found");
         }
     
         const googleData = googleUser.providerData.filter((data)=> data.providerId === "google.com")[0];
@@ -93,21 +92,24 @@ exports.firebaseSignin = asyncHandler(async(req, res, next)=>{
     }
             
     if(!email){
-        throw new ApiError(400, "User email not found");
+        throw new ApiError(404, "User email not found");
     }
 
-    const user = await User.findOne({email});
+    const user = await User.findOne({email}).select("-password -previousIternaries");
 
     if(!user){
-        throw new ApiError(400, "User not registered");
+        throw new ApiError(409, "User not registered");
     }
 
-    user.password = undefined;
+    // generate jwt token
+    const token = user.generateAccessToken();
 
+    // return response
+    res.header("x-auth-token", token);
+    
     return res.status(200).json(
-        new ApiResponse(200, user, "User successfully singed in")
+        new ApiResponse(200, {...user._doc, token}, "User signin via firebase successful")
     )
-
     
 })
 
@@ -133,18 +135,17 @@ exports.signUp = asyncHandler(async(req, res, next)=>{
     // verify Otp
     const sentOtp = await Otp.find({email, type:"signup"}).sort({createdAt : -1}).limit(1);
 
-    if(!sentOtp){
-        throw new ApiError(400, "Otp was genereated");
+    if(sentOtp.length == 0){
+        throw new ApiError(410, "Otp was not generated");
     }
 
     if(sentOtp[0].otp !== otp){
         throw new ApiError(400, "Incorrect OTP");
     }
 
-    await Otp.findByIdAndDelete(sentOtp._id);
-
     // check if user already existed
     const existedUser = await User.findOne({email});
+
     if(existedUser){
         throw new ApiError(409, "email already registered");
     }
@@ -157,59 +158,66 @@ exports.signUp = asyncHandler(async(req, res, next)=>{
     // ecrypt password
     password = await bcrypt.hash(password, 10);
 
-
-
     // create entry in db
     const createdUser = await User.create({email, password, firstName, lastName});
     if(!createdUser){
         throw new ApiError(500, "User registeration failed");
     }
+
     // generate jwt token
     const token = createdUser.generateAccessToken();
+
 
     // return response
     res.header("x-auth-token", token);
     createdUser.password = undefined;
-    return res.status(201).json(
-        new ApiResponse(201, {...createdUser._doc, token}, "User signup successful")
+    createdUser.previousIternaries = undefined;
+    return res.status(200).json(
+        new ApiResponse(200, {...createdUser._doc, token}, "User signup successful")
     )
 
 })
 
 exports.sendOtp = asyncHandler( async(req, res, next)=>{
     
+    // take input
     const {email, type} = req.body;                                 // type tells that being used for singup or forgot password
 
+    // verify input
     if(!email) throw new ApiError(400, "Email field required");
 
     if(type !== "signup" && type !== "forgotPassword"){
-        throw new ApiError(400, "Otp type incorrect");
+        throw new ApiError(400, "Ivalid otp type requested");
     }
 
+    // check if user for this email exists
     const existedUser = await User.findOne({email});
 
-    if(type === "signup" && existedUser){
+    if(existedUser && type === "signup"){
         throw new ApiError(409, "Provided email already in use");
     } 
-
-    else if(type === "forgotPassword" && !existedUser){
-        throw new ApiError(409, "Email not registered");
-    }
+    if(!existedUser && type === "forgotPassword"){
+        throw new ApiError(409, "User not registered");
+    } 
     
-    const otp = otpGenerator.generate( type === "signup" ? 4 : 6, {
+    // generate new otp
+    const otp = otpGenerator.generate( 4, {
         upperCaseAlphabets: false,
         lowerCaseAlphabets: false,
         specialChars:false
     });
 
+    // send email
     const emailResponse = await mailSender(email, "Your Ontrigo verification code is: ", otp);
 
     if(!emailResponse){
         throw new ApiError(500, "Otp verification email couldn't be sent");
     }
 
+    // create entry for otp in db
     const createdOtp = await Otp.create({otp, email, type});
 
+    // return response
     return res.status(200).json( new ApiResponse(200, "otp sent successfully"));
 
 })
@@ -230,24 +238,24 @@ exports.signIn = asyncHandler(async(req, res, next)=>{
         throw new ApiError(400, "Provide required fields");
     } 
 
-    const registeredUser = await User.findOne({email});
+    const registeredUser = await User.findOne({email}).select("-previousIternaries");
     if(!registeredUser){
-        throw new ApiError(400, "User with provided email doesn't exist")
+        throw new ApiError(409, "User with provided email doesn't exist")
     } 
-
     const isCorrect = await registeredUser.verifyPassword(password);
+
     const provider = registeredUser.provider;
+
     if(!isCorrect && provider === "local"){
         throw new ApiError(400, "Incorrect Password");
     } 
     
-
     const token = await registeredUser.generateAccessToken();
+
+    registeredUser.password = undefined;
 
     res.header('x-auth-token', token);
 
-    registeredUser.password = undefined;
-    
     return res.status(200).json( 
         new ApiResponse(200, { ...registeredUser._doc, token}, "User login successfull")
     )
@@ -256,35 +264,42 @@ exports.signIn = asyncHandler(async(req, res, next)=>{
 
 exports.forgotPassword = asyncHandler(async(req, res, next)=>{
 
-    const {email, password, confirmPassword} = req.body;
+    const {email, password, confirmPassword, otp} = req.body;
 
-    if(!password || !confirmPassword){
+    if(!password || !confirmPassword || !email || !otp){
         throw new ApiError(400, "Please provide the required details");
     }
+
+    // verify Otp
+    const sentOtp = await Otp.find({email, type:"forgotPassword"}).sort({createdAt : -1}).limit(1);
+
+    console.log(sentOtp);
+
+    if(sentOtp.length == 0){
+        throw new ApiError(410, "Otp was not generated");
+    }
+
+    if(sentOtp[0].otp !== otp){
+        throw new ApiError(400, "Incorrect OTP");
+    }
+
 
     if(password !== confirmPassword){
         throw new ApiError(400, "Password and Confirm passwrod doesn't match");
     }
 
     const isWeak =  passSteangth(password);
+    
     if(isWeak){
         throw new ApiError(400, isWeak);
     }
+    const encryptedPass = await bcrypt.hash(password, 10);
 
-    const user = await User.findOne({email});
+    const user = await User.findOneAndUpdate({email}, {password:encryptedPass}, {new:true}).select("-password -previousIternaries");
 
-    if(!user){
-        throw new ApiError(400, "Password can't be reset, user not found")
-    }
-
-    user.password = await bcrypt.hash(password, 10);
-
-    await user.save();
-
-    user.password = undefined;
 
     return res.status(200).json(
-        new ApiResponse(200, user, "Password reset successful")
+        new ApiResponse(200, user._doc, "Password reset successful")
     )
 
 })

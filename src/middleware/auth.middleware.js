@@ -15,7 +15,7 @@ const auth = asyncHandler( async function(req, res, next){
     const verifiedUser = await jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
 
     if(!verifiedUser){
-        throw new ApiError(400, "Authorisation failed");
+        throw new ApiError(400, "Authorisation failed, token provided is not valid");
     }
 
     const user = await User.findById(verifiedUser._id);
