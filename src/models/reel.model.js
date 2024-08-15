@@ -2,6 +2,11 @@ const mongoose = require("mongoose");
 
 const reelSchema = new mongoose.Schema(
     {
+        user:{
+            type:mongoose.Schema.Types.ObjectId,
+            ref:"User",
+            required:true,
+        },
         title:{
             type:String,
             required:[true, "reel title is required"]
@@ -19,10 +24,27 @@ const reelSchema = new mongoose.Schema(
             type:String,
             required:true,
             trim:true
+        },
+        tags:[{
+            type:String,
+            lowercase:true,
+            trim:true,
+        }],
+        comments:[{
+            type:mongoose.Schema.Types.ObjectId,
+            ref:"Comment",
+            default:[],
+        }],
+        likes:[{
+            type:mongoose.Schema.Types.ObjectId
+        }],
+        archived:{
+            type:Boolean,
+            default:false,
         }
     },
     {
-        timeStamps: true
+        timestamps: true
     }
 );
 

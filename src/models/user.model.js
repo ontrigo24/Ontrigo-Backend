@@ -26,11 +26,6 @@ const userScehma = new mongoose.Schema(
             required:true,
             trim:true,
         },
-        avatarUrl:{
-            type:String,
-            trim:true,
-            default: ""
-        },
         phoneNumber:{
             type:String,
             trim:true,
@@ -47,12 +42,34 @@ const userScehma = new mongoose.Schema(
         martialStatus:{
             type:Boolean
         },
+        bio:{
+            type:String,
+            trim:true,
+        },
+        avatarUrl:{
+            type:String,
+            trim:true,
+            default: ""
+        },
+        coverUrl:{
+            type:String,
+            trim:true,
+        },        
+        reels:[{
+            type:mongoose.Schema.Types.ObjectId,
+            ref:"Reel",
+            default:[],
+        }],
         provider:{
             type:String,
             enum:["local", "google", "facebook"],
             default:"local",
             required:true,
         },
+        rewards:[{      // provide points with the profile data dynamically
+            type:mongoose.Schema.Types.ObjectId,
+            ref:"Reward",
+        }],
         previousIternaries:[{                                   // Iternaries that the user has finalalised for booking in the past
             type: mongoose.Schema.Types.ObjectId,
             ref: "Iternary"
