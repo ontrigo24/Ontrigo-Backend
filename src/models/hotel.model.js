@@ -8,7 +8,6 @@ const hotelSchema = new mongoose.Schema(
             trim:true,
             index:true,
         },
-        
         name:{
             type:String,
             required:true,
@@ -46,7 +45,7 @@ const hotelSchema = new mongoose.Schema(
 
     },
     {
-        timeStamps: true
+        timestamps: true
     }
 );
 

@@ -158,8 +158,10 @@ exports.signUp = asyncHandler(async(req, res, next)=>{
     // ecrypt password
     password = await bcrypt.hash(password, 10);
 
+    const userProfile = await Profile.create();
+
     // create entry in db
-    const createdUser = await User.create({email, password, firstName, lastName});
+    const createdUser = await User.create({email, password, firstName, lastName, profile:userProfile});
     if(!createdUser){
         throw new ApiError(500, "User registeration failed");
     }
@@ -293,6 +295,7 @@ exports.forgotPassword = asyncHandler(async(req, res, next)=>{
     if(isWeak){
         throw new ApiError(400, isWeak);
     }
+
     const encryptedPass = await bcrypt.hash(password, 10);
 
     const user = await User.findOneAndUpdate({email}, {password:encryptedPass}, {new:true}).select("-password -previousIternaries");
@@ -312,6 +315,44 @@ exports.getUser = asyncHandler(async(req, res, next)=>{
 
     return res.status(200).json(
         new ApiResponse(200, user._doc, "user details fetched successfully")
+    )
+})
+
+exports.changePassword = asyncHandler(async(req, res, next)=>{
+    const {currentPassword, newPassword, confirmPassword} = req.body;
+
+    const user = req.user;
+
+    if(!currentPassword || !newPassword || !confirmPassword){
+        throw new ApiError(400, "Please provide all required fields");
+    }
+
+    const passVerified = await user.verifyPassword(currentPassword);
+
+    if(!passVerified){
+        throw new ApiError(400, "Incorrect password");
+    }
+
+    if(newPassword !== confirmPassword){
+        throw new ApiError(400, "Password and confirm passwrod doesn't match");
+    }
+
+    const isWeak =  passSteangth(newPassword);
+    
+    if(isWeak){
+        throw new ApiError(400, isWeak);
+    }
+
+    const encryptedPassword = await bcrypt.hash(newPassword, 10);
+
+    user.password = encryptedPassword;
+
+    const savedUser = await user.save();
+
+    savedUser.password = undefined;
+
+    return res.status(200).json(
+        new ApiResponse(200, savedUser._doc, "Password changed successfully")
     )
 })
 
