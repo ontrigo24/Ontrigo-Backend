@@ -18,4 +18,7 @@ app.use(cookieParser());
 
 app.use("/api/auth/", require("./routes/auth.router"));
 
+app.use("/api/q", require("./routes/booking.router"));
+
+
 module.exports = app;

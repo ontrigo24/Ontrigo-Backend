@@ -7,7 +7,6 @@ const admin = require("../config/firebase.config");
 
 // signup using facebook
 
-
 exports.firebaseSignup = asyncHandler(async(req, res, next)=>{
 
     let {provider, providerToken} = req.body;
@@ -158,10 +157,8 @@ exports.signUp = asyncHandler(async(req, res, next)=>{
     // ecrypt password
     password = await bcrypt.hash(password, 10);
 
-    const userProfile = await Profile.create();
-
     // create entry in db
-    const createdUser = await User.create({email, password, firstName, lastName, profile:userProfile});
+    const createdUser = await User.create({email, password, firstName, lastName});
     if(!createdUser){
         throw new ApiError(500, "User registeration failed");
     }
