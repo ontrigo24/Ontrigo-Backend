@@ -26,6 +26,7 @@ exports.getHotels = asyncHandler(async(req, res, next)=>{
         children_ages: childrenAge ? childrenAge : undefined,
         max_price: maxPrice,
         amenities: amenities ? amenities : undefined,
+        no_cache:true,
     }, (fetchedData) => {
         
         if(!fetchedData || !fetchedData.properties || fetchedData.properties.length === 0){
