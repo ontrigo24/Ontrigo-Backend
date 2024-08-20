@@ -1,4 +1,4 @@
-const {getHotels} = require("../controllers/booking.controller");
+const {getHotels} = require("../controllers/controllers.booking/hotel.booking");
 const auth = require("../middleware/auth.middleware");
 const express = require("express");
 

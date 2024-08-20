@@ -1,7 +1,8 @@
-const {asynHandler, ApiResponse, ApiError, asyncHandler} = require("../utils");
+const {asynHandler, ApiResponse, ApiError, asyncHandler} = require("../../utils");
 const { getJson } = require("serpapi");
-// hotel booking
+const {RailwayStation} = require("../../models");
 
+// hotel booking
 exports.getHotels = asyncHandler(async(req, res, next)=>{
 
     const {city, checkIn, checkOut, currency, adults, childrenAge, maxPrice, amenities} = req.body;
@@ -77,3 +78,13 @@ exports.getHotels = asyncHandler(async(req, res, next)=>{
 
 })
 
+
+async function bulkInsertData(data, collection){
+    try{
+        const insertedData = await collection.insertMany(data);
+        console.log(`data inserted successfully\n`);
+    }
+    catch(err){
+        console.log("ERROR while bulk insertion of data", err);
+    }
+}
