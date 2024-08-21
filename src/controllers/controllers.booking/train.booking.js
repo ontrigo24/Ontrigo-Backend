@@ -3,7 +3,8 @@ const { asyncHandler } = require("../../utils");
 
 
 exports.stationAutocomplete = asyncHandler(async(req, res, next)=>{
-      
+
+
 })
 
 exports.getTrainsBetweenStations = asyncHandler(async(req, res, next)=>{

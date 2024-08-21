@@ -25,4 +25,5 @@ const railwayStationSchema = mongoose.Schema(
 );
 
 railwayStationSchema.index({location: "text"});
+
 module.exports = mongoose.model("RailwayStation", railwayStationSchema);
