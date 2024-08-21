@@ -11,8 +11,11 @@ exports.firebaseSignup = asyncHandler(async(req, res, next)=>{
 
     let {provider, providerToken} = req.body;
 
+    console.log(provider, "\n", providerToken);
+
     if(!providerToken || !provider){    
-        throw new ApiError(400, "Please provide required fields");
+        const notFound = !providerToken ? "providerToken" : "provider";
+        throw new ApiError(400, `Please provide required fields, ${notFound} not found`);
     } 
 
     if(provider !== "google" && provider !== "facebook"){
@@ -71,8 +74,11 @@ exports.firebaseSignup = asyncHandler(async(req, res, next)=>{
 exports.firebaseSignin = asyncHandler(async(req, res, next)=>{
     const {provider, providerToken} = req.body;
 
+    console.log(provider, "\n", providerToken);
+
     if(!provider || !providerToken){
-        throw new ApiError(400, "Please provide required fields")
+        const notFound = !providerToken ? "providerToken" : "provider";
+        throw new ApiError(400, `Please provide required fields, ${notFound} not found`);
     } 
 
     let email = null;
