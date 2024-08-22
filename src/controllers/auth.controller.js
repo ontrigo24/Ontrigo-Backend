@@ -61,7 +61,10 @@ exports.firebaseSignup = asyncHandler(async(req, res, next)=>{
         password,
         avatarUrl,
         provider,
-    }).select("-password -previousIternaries");
+    });
+
+    user.password = undefined;
+    user.previousIternaries = undefined;
 
     // generate jwt token
     const token = user.generateAccessToken();
