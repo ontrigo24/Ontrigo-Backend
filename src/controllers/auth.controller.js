@@ -28,19 +28,23 @@ exports.firebaseSignup = asyncHandler(async(req, res, next)=>{
     if(provider === "google"){
         const googleUser = await admin.auth().verifyIdToken(providerToken);
 
+        console.log(googleUser);
+
         if(!googleUser){
             throw new ApiError(404, "google user not found");
         }
 
-        const googleData = googleUser.providerData.filter((data)=> data.providerId === "google.com")[0];
+        if(!googleUser.email_verified){
+            throw new ApiError(400, "email verification failed");
+        }
+        email = googleUser.email;
 
-        const {displayName} = googleData;
+        const {name} = googleUser;
 
-        firstName = displayName.split(" ")[0];
-        lastName = displayName.split(" ")[1];
+        firstName = name.split(" ")[0];
+        lastName = name.split(" ")[1];
 
-        email = googleData.email;
-        avatarUrl = googleData.photoURL;
+        avatarUrl = googleUser.picture;
     }
             
     // check if user already registered
@@ -55,9 +59,12 @@ exports.firebaseSignup = asyncHandler(async(req, res, next)=>{
         firstName,
         lastName,
         password,
-        photoUrl,
+        avatarUrl,
         provider,
-    }).select("-password -previousIternaries");
+    });
+
+    user.password = undefined;
+    user.previousIternaries = undefined;
 
     // generate jwt token
     const token = user.generateAccessToken();
