@@ -28,11 +28,13 @@ exports.firebaseSignup = asyncHandler(async(req, res, next)=>{
     if(provider === "google"){
         const googleUser = await admin.auth().verifyIdToken(providerToken);
 
+        console.log(googleUser);
+
         if(!googleUser){
             throw new ApiError(404, "google user not found");
         }
 
-        const googleData = googleUser.providerData.filter((data)=> data.providerId === "google.com")[0];
+        const googleData = googleUser?.providerData?.filter((data)=> data.providerId === "google.com")[0];
 
         const {displayName} = googleData;
 
