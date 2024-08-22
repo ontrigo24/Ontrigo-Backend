@@ -14,7 +14,9 @@ const userScehma = new mongoose.Schema(
         },
         password:{
             type:String,
-            required:[true, 'Password is required']
+            required: function() {
+                return this.provider === "local"; 
+            },
         },
         firstName:{
             type:String,
