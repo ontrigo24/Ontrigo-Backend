@@ -37,7 +37,7 @@ exports.firebaseSignup = asyncHandler(async(req, res, next)=>{
         if(!googleUser.email_verified){
             throw new ApiError(400, "email verification failed");
         }
-        const email = googleUser.email;
+        email = googleUser.email;
 
         const {name} = googleUser;
 
