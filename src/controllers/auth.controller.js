@@ -11,7 +11,7 @@ exports.firebaseSignup = asyncHandler(async(req, res, next)=>{
 
     let {provider, providerToken} = req.body;
 
-    console.log(provider, "\n", providerToken);
+    console.log(provider + "\n" + providerToken);
 
     if(!providerToken || !provider){    
         const notFound = !providerToken ? "providerToken" : "provider";
@@ -23,34 +23,30 @@ exports.firebaseSignup = asyncHandler(async(req, res, next)=>{
     }
 
     // get details from provierToken
-    let firstName = null, lastName = null, email = null, avatarUrl = null, password = null;
+    const firebaseUser = await admin.auth().verifyIdToken(providerToken);
 
-    if(provider === "google"){
-        const googleUser = await admin.auth().verifyIdToken(providerToken);
-
-        console.log(googleUser);
-
-        if(!googleUser){
-            throw new ApiError(404, "google user not found");
-        }
-
-        if(!googleUser.email_verified){
-            throw new ApiError(400, "email verification failed");
-        }
-        email = googleUser.email;
-
-        const {name} = googleUser;
-
-        firstName = name.split(" ")[0];
-        lastName = name.split(" ")[1];
-
-        avatarUrl = googleUser.picture;
+    if(!firebaseUser){
+        throw new ApiError(404, `${provider} user not found`);
     }
-            
+
+    if(!firebaseUser.email_verified){
+        throw new ApiError(400, "email verification failed");
+    }
+        
+    const email = firebaseUser?.email;
+
+    const name = firebaseUser?.name;
+
+    const firstName = name.split(" ")[0];
+    const lastName = name.split(" ")[1];
+
+    const avatarUrl = firebaseUser?.picture;
+    
     // check if user already registered
     const existedUser = await User.findOne({email});
+
     if(existedUser){
-        throw new ApiError(409, "Email already in use");
+        throw new ApiError(400, "Email already in use");
     }
 
     // create entry in db
@@ -58,7 +54,7 @@ exports.firebaseSignup = asyncHandler(async(req, res, next)=>{
         email,
         firstName,
         lastName,
-        password,
+        password: null,
         avatarUrl,
         provider,
     });
@@ -88,21 +84,14 @@ exports.firebaseSignin = asyncHandler(async(req, res, next)=>{
         throw new ApiError(400, `Please provide required fields, ${notFound} not found`);
     } 
 
-    let email = null;
+    const firebaseUser = await admin.auth().verifyIdToken(providerToken);
 
-    if(provider === "google"){
-        const googleUser = await admin.auth().verifyIdToken(providerToken);
-
-        if(!googleUser){
-            throw new ApiError(404, "google user not found");
-        }
-    
-        const googleData = googleUser.providerData.filter((data)=> data.providerId === "google.com")[0];
-
-        email = googleData.email;
-    
+    if(!firebaseUser){
+        throw new ApiError(404, `${provider} user not found`);
     }
-            
+
+    const email = firebaseUser?.email;
+    
     if(!email){
         throw new ApiError(404, "User email not found");
     }
